@@ -1,0 +1,8 @@
+# Debentures
+
+* retrieve and parse TMX debenture list
+* lookup quotes for securities
+* add prospectus info
+* store as json 
+* generate csv
+* view in spreadsheet
