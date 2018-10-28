@@ -10,6 +10,10 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 
+// Requires certificate to be registered with jvm:
+//
+// sudo ~/sw/java/jdk1.8.0_74/bin/keytool -importcert -file ./wwwalphavantageco.crt -alias alphavantage -keystore ~/sw/java/jdk1.8.0_74/jre/lib/security/cacerts -storepass changeit
+
 public class AlphaVantageService {
 
 

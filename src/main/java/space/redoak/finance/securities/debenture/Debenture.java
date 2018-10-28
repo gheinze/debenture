@@ -11,6 +11,7 @@ import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 
+
 @Getter @Setter
 public class Debenture {
 
@@ -19,9 +20,9 @@ public class Debenture {
     private BigDecimal percentage;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private LocalDate startDate;
+    private LocalDate issueDate;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private LocalDate endDate;
+    private LocalDate maturityDate;
 
     private BigDecimal lastPrice;
 
@@ -43,13 +44,13 @@ public class Debenture {
     //=IF(ISBLANK(H23),"", HYPERLINK(H23, "Prospectus"))
 
     public String toCsv() {
-        return String.format("%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s"
+        return String.format("%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s"
 
                 ,symbol
                 ,description
                 ,null == percentage ? "" : percentFormat.format(percentage)
-                ,null == startDate ? "" : dateFormatter.format(startDate)
-                ,null == endDate ? "" : dateFormatter.format(endDate)
+                ,null == issueDate ? "" : dateFormatter.format(issueDate)
+                ,null == maturityDate ? "" : dateFormatter.format(maturityDate)
 
                 ,null == lastPrice ? "" : moneyFormat.format(lastPrice)
                 ,null == lastPriceDate ? "" : dateFormatter.format(lastPriceDate)
@@ -62,6 +63,7 @@ public class Debenture {
 
                 ,null == conversionPrice ? "" : moneyFormat.format(conversionPrice)
                 ,getConversionRate()
+                ,getConverted()
 
                 ,null == prospectus ? "" : prospectus
         );
@@ -74,11 +76,11 @@ public class Debenture {
     //=IF(ISBLANK(E24),"", C24 - ((F24 - 100) /  (DAYS(E24,TODAY())/365)))
     private String getEffectiveRate() {
 
-        if (null == endDate || lastPrice == null || endDate == null || null == percentage) {
+        if (null == maturityDate || null == lastPrice || null == percentage) {
             return "";
         }
 
-        long daysTillMaturity = DAYS.between(LocalDate.now(), endDate);
+        long daysTillMaturity = DAYS.between(LocalDate.now(), maturityDate);
         BigDecimal premium = lastPrice.subtract(BASE_PRICE);
 
         BigDecimal yearsTillMaturity = new BigDecimal( (double)daysTillMaturity / (double)DAYS_IN_YEAR );
@@ -90,11 +92,23 @@ public class Debenture {
     }
 
 
+    private BigDecimal conversionRate() {
+        return BASE_PRICE.divide(conversionPrice, 3, RoundingMode.HALF_UP);
+    }
+
     private String getConversionRate() {
         if (null == conversionPrice) {
             return "";
         }
-        return percentFormat.format(BASE_PRICE.divide(conversionPrice, 3, RoundingMode.HALF_UP));
+        return percentFormat.format(conversionRate());
+    }
+
+
+    private String getConverted() {
+        if (null == conversionPrice || null == underlyingLastPrice) {
+            return "";
+        }
+        return moneyFormat.format(underlyingLastPrice.multiply(conversionRate()));
     }
 
 
@@ -106,7 +120,7 @@ public class Debenture {
         return hash;
     }
 
-    
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {

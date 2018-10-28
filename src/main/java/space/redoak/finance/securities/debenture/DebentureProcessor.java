@@ -76,8 +76,11 @@ public class DebentureProcessor {
 
 
             case ACTION_UPDATE_QUOTES:
+                persistence.backup(JSON_DATA_SOURE);
                 addQuotes(debentures);
                 addBaseQuotes(debentures);
+                persistence.persistAsJson(debentures, JSON_DATA_SOURE);
+                toCsv(debentures);
                 break;
 
 
@@ -113,13 +116,14 @@ public class DebentureProcessor {
 
     private void addQuotes(List<Debenture> debentures) throws IOException {
 
-        // sudo ~/sw/java/jdk1.8.0_74/bin/keytool -importcert -file ./wwwalphavantageco.crt -alias alphavantage -keystore ~/sw/java/jdk1.8.0_74/jre/lib/security/cacerts -storepass changeit
-
         for (Debenture debenture : debentures) {
             AlphaVantageQuote quote = quoteService.getQuote(debenture.getSymbol());
             if (isGoodQuote(quote, debenture.getSymbol())) {
                 debenture.setLastPrice(quote.getGlobalQuote().getPrice());
                 debenture.setLastPriceDate(LocalDate.parse(quote.getGlobalQuote().getLastTradingDay()));
+                System.out.println("Updated quote for: " + debenture.getSymbol());
+            } else {
+                System.out.println("Failed to retrieve good quote for: " + debenture.getSymbol());
             }
             throttle();
         }
@@ -128,8 +132,6 @@ public class DebentureProcessor {
 
 
     private void addBaseQuotes(List<Debenture> debentures) throws IOException {
-
-        // sudo ~/sw/java/jdk1.8.0_74/bin/keytool -importcert -file ./wwwalphavantageco.crt -alias alphavantage -keystore ~/sw/java/jdk1.8.0_74/jre/lib/security/cacerts -storepass changeit
 
         Map<String, AlphaVantageQuote> quoteCache = new HashMap<>();
 

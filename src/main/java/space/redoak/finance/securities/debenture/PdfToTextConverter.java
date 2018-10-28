@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 /**
  *
@@ -44,40 +42,6 @@ public class PdfToTextConverter {
         reader.close();
 
         return lines;
-
-    }
-
-
-    private static JSONObject toJson(List<String> lines) {
-
-        JSONObject json = new JSONObject();
-
-        String date = lines.get(0).replace("DEBT INSTRUMENTS as of ", "").trim();
-        json.put("date", date);
-
-        JSONArray jsonArray = new JSONArray();
-
-        for (int i = 2; i < lines.size(); i++) {
-            if (lines.get(i).startsWith("Notes")) {
-                break;
-            }
-            if (lines.get(i).trim().isEmpty()) {
-                continue;
-            }
-            String[] line = lines.get(i).split(" ", 2);
-            String symbol = line[0];
-            String remainder = line[1].trim();
-            String description = remainder.substring(0, remainder.lastIndexOf(" ") + 1).trim();
-            JSONObject instrument = new JSONObject();
-            instrument.put("symbol", symbol);
-            instrument.put("description", description);
-            jsonArray.put(instrument);
-        }
-
-
-        json.put("instruments", jsonArray);
-
-        return json;
 
     }
 
