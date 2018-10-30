@@ -1,8 +1,14 @@
 package space.redoak.finance.securities.debenture;
 
+import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
+import com.google.api.services.sheets.v4.model.ValueRange;
 import com.itextpdf.text.DocumentException;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +29,7 @@ public class DebentureProcessor {
     private static final String JSON_DATA_SOURE = "/home/gheinze/CODE/debenture/data/DebtInstrumentsProcessed.json";
 
     private static final String ACTION_CSV = "csv";
+    private static final String ACTION_TO_GOOGLE_SHEET = "toGoogleSheet";
     private static final String ACTION_UPDATE_LIST = "updateList";
     private static final String ACTION_UPDATE_QUOTES = "updateQuotes";
 
@@ -33,7 +40,7 @@ public class DebentureProcessor {
     private final AlphaVantageService quoteService = new AlphaVantageService();
 
 
-    public static void main(String[] args) throws IOException, DocumentException, InterruptedException {
+    public static void main(String[] args) throws IOException, DocumentException, InterruptedException, GeneralSecurityException {
 
         //final String action = args[0];
         final String action = ACTION_CSV;
@@ -44,7 +51,7 @@ public class DebentureProcessor {
     }
 
 
-    private void process(String action) throws IOException {
+    private void process(String action) throws IOException, GeneralSecurityException {
 
 
         List<Debenture> debentures = persistence.loadFromJson(JSON_DATA_SOURE);
@@ -55,6 +62,11 @@ public class DebentureProcessor {
 
             case ACTION_CSV:
                 toCsv(debentures);
+                break;
+
+
+            case ACTION_TO_GOOGLE_SHEET:
+                toGoogleSheet(debentures);
                 break;
 
 
@@ -181,5 +193,25 @@ public class DebentureProcessor {
         localDebentures.stream().forEach(d -> System.out.println(d.toCsv()));
     }
 
+
+    private static final String DEBENTURE_SHEET = "1sT49fKDtIVzrcAiLojnAgtB1jkXCicVEEHStEOTJKoU";
+
+    private void toGoogleSheet(List<Debenture> debentures) throws IOException, GeneralSecurityException {
+
+        List<List<Object>> range = debentures.stream()
+                .map(d -> new ArrayList<Object>(Arrays.asList(d.toCsv().split("~"))))
+                .collect(Collectors.toList());
+
+
+        Sheets sheetsService = SheetsServiceUtil.getSheetsService();
+
+        ValueRange body = new ValueRange().setValues(range);
+
+        UpdateValuesResponse result = sheetsService.spreadsheets().values()
+                .update(DEBENTURE_SHEET, "A4", body)
+                .setValueInputOption("RAW")
+                .execute();
+
+    }
 
 }

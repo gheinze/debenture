@@ -17,7 +17,7 @@ import org.apache.http.util.EntityUtils;
 public class AlphaVantageService {
 
 
-    private static final String ALPHAVANTAGE_API_KEY = System.getProperty("ALPHAVANTAGE_API_KEY");
+    private static final String ALPHAVANTAGE_API_KEY = System.getenv("ALPHAVANTAGE_API_KEY");
 
 
 
