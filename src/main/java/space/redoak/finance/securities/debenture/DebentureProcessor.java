@@ -1,5 +1,10 @@
 package space.redoak.finance.securities.debenture;
 
+import com.accounted4.commons.google.api.SheetsServiceUtil;
+import com.accounted4.commons.finance.AlphaVantageService;
+import com.accounted4.commons.finance.AlphaVantageQuoteDao;
+import com.accounted4.commons.io.FilePersistenceService;
+import com.accounted4.commons.io.PersistenceService;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
@@ -17,16 +22,24 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 
-
+/**
+ * Maintain a list of Debentures by
+ *   - discovering new issues from list published as pdf on TMX site
+ *   - updating quotes with queries to AlphaVantage
+ *   - persisting as json file
+ *   - publishing to a Google Sheet.
+ * 
+ * @author glenn
+ */
 public class DebentureProcessor {
 
 
-    private static final String DEBT_INSTRUMENTS_LOCAL  = "file:///home/gheinze/CODE/debenture/data/DebtInstruments.pdf";
+    private static final String DEBT_INSTRUMENTS_LOCAL  = "file:///home/glenn/code/debenture/data/DebtInstruments.pdf";
     private static final String DEBT_INSTRUMENTS_REMOTE = "https://www.tmxmoney.com/en/pdf/DebtInstruments.pdf";
 
     private static final String DEBT_INSTRUMENTS = DEBT_INSTRUMENTS_LOCAL;
 
-    private static final String JSON_DATA_SOURE = "/home/gheinze/CODE/debenture/data/DebtInstrumentsProcessed.json";
+    private static final String JSON_DATA_SOURE = "/home/glenn/code/debenture/data/DebtInstrumentsProcessed.json";
 
     private static final String ACTION_CSV = "csv";
     private static final String ACTION_TO_GOOGLE_SHEET = "toGoogleSheet";
@@ -36,14 +49,14 @@ public class DebentureProcessor {
     private static final long QUOTE_SERVICE_THROTTLE_TIME_IN_MS = 20000l;
 
 
-    private final PersistenceService persistence = new PersistenceService();
+    private final PersistenceService<Debenture> persistence = new FilePersistenceService<>(Debenture.class);
     private final AlphaVantageService quoteService = new AlphaVantageService();
 
 
     public static void main(String[] args) throws IOException, DocumentException, InterruptedException, GeneralSecurityException {
 
         //final String action = args[0];
-        final String action = ACTION_CSV;
+        final String action = ACTION_TO_GOOGLE_SHEET;
 
         DebentureProcessor processor = new DebentureProcessor();
         processor.process(action);
@@ -126,16 +139,21 @@ public class DebentureProcessor {
     }
 
 
-    private void addQuotes(List<Debenture> debentures) throws IOException {
+    private void addQuotes(List<Debenture> debentures) {
 
         for (Debenture debenture : debentures) {
-            AlphaVantageQuote quote = quoteService.getQuote(debenture.getSymbol());
-            if (isGoodQuote(quote, debenture.getSymbol())) {
-                debenture.setLastPrice(quote.getGlobalQuote().getPrice());
-                debenture.setLastPriceDate(LocalDate.parse(quote.getGlobalQuote().getLastTradingDay()));
-                System.out.println("Updated quote for: " + debenture.getSymbol());
-            } else {
-                System.out.println("Failed to retrieve good quote for: " + debenture.getSymbol());
+            String symbol = debenture.getSymbol();
+            try {
+                AlphaVantageQuoteDao quote = quoteService.getQuote(symbol);
+                if (isGoodQuote(quote, symbol)) {
+                    debenture.setLastPrice(quote.getGlobalQuote().getPrice());
+                    debenture.setLastPriceDate(LocalDate.parse(quote.getGlobalQuote().getLastTradingDay()));
+                    System.out.println("Updated quote for: " + symbol);
+                } else {
+                    System.out.println("Failed to retrieve good quote for: " + symbol);
+                }
+            } catch (IOException ioe) {
+                System.out.println(symbol + ": " + ioe.getMessage());
             }
             throttle();
         }
@@ -145,20 +163,21 @@ public class DebentureProcessor {
 
     private void addBaseQuotes(List<Debenture> debentures) throws IOException {
 
-        Map<String, AlphaVantageQuote> quoteCache = new HashMap<>();
+        Map<String, AlphaVantageQuoteDao> quoteCache = new HashMap<>();
 
         for (Debenture debenture : debentures) {
 
-            if (null == debenture.getUnderlyingSymbol() || null != debenture.getUnderlyingLastPrice()) {
+            if (null == debenture.getUnderlyingSymbol()) {
                 continue;
             }
 
             String symbol = debenture.getUnderlyingSymbol();
 
-            AlphaVantageQuote quote = quoteCache.get(symbol);
+            AlphaVantageQuoteDao quote = quoteCache.get(symbol);
             if (null == quote) {
                 quote = quoteService.getQuote(debenture.getUnderlyingSymbol());
                 quoteCache.put(symbol, quote);
+                System.out.println("Updated quote for: " + debenture.getUnderlyingSymbol());
                 throttle();
             }
 
@@ -172,7 +191,7 @@ public class DebentureProcessor {
     }
 
 
-    private boolean isGoodQuote(AlphaVantageQuote quote, String symbol) {
+    private boolean isGoodQuote(AlphaVantageQuoteDao quote, String symbol) {
         if (null == quote || null == quote.getGlobalQuote() || null == quote.getGlobalQuote().getPrice() || null == quote.getGlobalQuote().getLastTradingDay()) {
             System.out.println("Skipping quote for: " + symbol);
             return false;
@@ -213,5 +232,5 @@ public class DebentureProcessor {
                 .execute();
 
     }
-
+   
 }

@@ -9,6 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 
+/**
+ * Scrape the list of debentures listed on a pdf published on the TMX site.
+ * 
+ * @author glenn
+ */
 public class TmxDebentureParser {
 
     private static final String DEFAULT_SOURCE = "https://www.tmxmoney.com/en/pdf/DebtInstruments.pdf";

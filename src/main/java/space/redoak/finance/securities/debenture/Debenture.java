@@ -12,6 +12,11 @@ import lombok.Getter;
 import lombok.Setter;
 
 
+/**
+ * DTO.
+ * 
+ * @author glenn
+ */
 @Getter @Setter
 public class Debenture {
 
@@ -37,36 +42,35 @@ public class Debenture {
     private LocalDate underlyingLastPriceDate;
     private BigDecimal conversionPrice;
 
-    private static final DecimalFormat moneyFormat = new DecimalFormat("#,###.00");
-    private static final DecimalFormat percentFormat = new DecimalFormat("#,###.000");
-    private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final String SEPARATOR = "~";
+    
+    private static final DecimalFormat MONEY_FORMAT = new DecimalFormat("#,###.00");
+    private static final DecimalFormat PERCENT_FORMAT = new DecimalFormat("#,###.000");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     //=IF(ISBLANK(H23),"", HYPERLINK(H23, "Prospectus"))
 
     public String toCsv() {
-        return String.format("%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s~%s"
+        
+        StringBuilder sb = new StringBuilder();
 
-                ,symbol
-                ,description
-                ,null == percentage ? "" : percentFormat.format(percentage)
-                ,null == issueDate ? "" : dateFormatter.format(issueDate)
-                ,null == maturityDate ? "" : dateFormatter.format(maturityDate)
-
-                ,null == lastPrice ? "" : moneyFormat.format(lastPrice)
-                ,null == lastPriceDate ? "" : dateFormatter.format(lastPriceDate)
-
-                ,getEffectiveRate()
-
-                ,null == underlyingSymbol ? "" : underlyingSymbol
-                ,null == underlyingLastPrice ? "" : moneyFormat.format(underlyingLastPrice)
-                ,null == underlyingLastPriceDate ? "" : dateFormatter.format(underlyingLastPriceDate)
-
-                ,null == conversionPrice ? "" : moneyFormat.format(conversionPrice)
-                ,getConversionRate()
-                ,getConverted()
-
-                ,null == prospectus ? "" : prospectus
-        );
+        sb.append(symbol).append(SEPARATOR);
+        sb.append(description).append(SEPARATOR);
+        sb.append(null == percentage    ? "" : PERCENT_FORMAT.format(percentage)).append(SEPARATOR);
+        sb.append(null == issueDate     ? "" : DATE_FORMAT.format(issueDate)).append(SEPARATOR);
+        sb.append(null == maturityDate  ? "" : DATE_FORMAT.format(maturityDate)).append(SEPARATOR);
+        sb.append(null == lastPrice     ? "" : MONEY_FORMAT.format(lastPrice)).append(SEPARATOR);
+        sb.append(null == lastPriceDate ? "" : DATE_FORMAT.format(lastPriceDate)).append(SEPARATOR);
+        sb.append(getEffectiveRate()).append(SEPARATOR);
+        sb.append(null == underlyingSymbol        ? "" : underlyingSymbol).append(SEPARATOR);
+        sb.append(null == underlyingLastPrice     ? "" : MONEY_FORMAT.format(underlyingLastPrice)).append(SEPARATOR);
+        sb.append(null == underlyingLastPriceDate ? "" : DATE_FORMAT.format(underlyingLastPriceDate)).append(SEPARATOR);
+        sb.append(null == conversionPrice ? "" : MONEY_FORMAT.format(conversionPrice)).append(SEPARATOR);
+        sb.append(getConversionRate()).append(SEPARATOR);
+        sb.append(getConverted()).append(SEPARATOR);
+        sb.append(null == prospectus ? "" : prospectus);
+        
+        return sb.toString();
     }
 
 
@@ -87,7 +91,7 @@ public class Debenture {
 
         BigDecimal adjustedAsAnnualizedPercent = premium.divide(yearsTillMaturity, 3, RoundingMode.HALF_UP);
 
-        return percentFormat.format(percentage.subtract(adjustedAsAnnualizedPercent));
+        return PERCENT_FORMAT.format(percentage.subtract(adjustedAsAnnualizedPercent));
 
     }
 
@@ -100,7 +104,7 @@ public class Debenture {
         if (null == conversionPrice) {
             return "";
         }
-        return percentFormat.format(conversionRate());
+        return PERCENT_FORMAT.format(conversionRate());
     }
 
 
@@ -108,7 +112,7 @@ public class Debenture {
         if (null == conversionPrice || null == underlyingLastPrice) {
             return "";
         }
-        return moneyFormat.format(underlyingLastPrice.multiply(conversionRate()));
+        return MONEY_FORMAT.format(underlyingLastPrice.multiply(conversionRate()));
     }
 
 
