@@ -41,6 +41,7 @@ public class Debenture {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate underlyingLastPriceDate;
     private BigDecimal conversionPrice;
+    private String comments;
 
     private static final String SEPARATOR = "~";
     
@@ -68,7 +69,8 @@ public class Debenture {
         sb.append(null == conversionPrice ? "" : MONEY_FORMAT.format(conversionPrice)).append(SEPARATOR);
         sb.append(getConversionRate()).append(SEPARATOR);
         sb.append(getConverted()).append(SEPARATOR);
-        sb.append(null == prospectus ? "" : prospectus);
+        sb.append(null == prospectus ? "" : prospectus).append(SEPARATOR);
+        sb.append(null == comments ? "" : comments);
         
         return sb.toString();
     }

@@ -59,7 +59,8 @@ public class DebentureProcessor {
         final String action = ACTION_TO_GOOGLE_SHEET;
 
         DebentureProcessor processor = new DebentureProcessor();
-        processor.process(action);
+        //processor.process(ACTION_UPDATE_QUOTES);
+        processor.process(ACTION_CSV);
 
     }
 
@@ -218,7 +219,7 @@ public class DebentureProcessor {
     private void toGoogleSheet(List<Debenture> debentures) throws IOException, GeneralSecurityException {
 
         List<List<Object>> range = debentures.stream()
-                .map(d -> new ArrayList<Object>(Arrays.asList(d.toCsv().split("~"))))
+                .map(d -> new ArrayList<Object>(Arrays.asList(d.toCsv().split("~", -1))))
                 .collect(Collectors.toList());
 
 
