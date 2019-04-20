@@ -1,8 +1,8 @@
 package space.redoak.finance.securities.debenture;
 
 import com.accounted4.commons.google.api.SheetsServiceUtil;
-import com.accounted4.commons.finance.AlphaVantageService;
-import com.accounted4.commons.finance.AlphaVantageQuoteDao;
+import com.accounted4.commons.finance.Quote;
+import com.accounted4.commons.finance.QuoteMediaService;
 import com.accounted4.commons.io.FilePersistenceService;
 import com.accounted4.commons.io.PersistenceService;
 import com.google.api.services.sheets.v4.Sheets;
@@ -11,7 +11,6 @@ import com.google.api.services.sheets.v4.model.ValueRange;
 import com.itextpdf.text.DocumentException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -50,7 +49,9 @@ public class DebentureProcessor {
 
 
     private final PersistenceService<Debenture> persistence = new FilePersistenceService<>(Debenture.class);
-    private final AlphaVantageService quoteService = new AlphaVantageService();
+    
+    //private final AlphaVantageService quoteService = new AlphaVantageService();
+    private final QuoteMediaService quoteService = new QuoteMediaService();
 
 
     public static void main(String[] args) throws IOException, DocumentException, InterruptedException, GeneralSecurityException {
@@ -59,8 +60,9 @@ public class DebentureProcessor {
         final String action = ACTION_TO_GOOGLE_SHEET;
 
         DebentureProcessor processor = new DebentureProcessor();
-        //processor.process(ACTION_UPDATE_QUOTES);
-        processor.process(ACTION_CSV);
+        processor.process(ACTION_UPDATE_QUOTES);
+//        processor.process(ACTION_CSV);
+        processor.process(ACTION_TO_GOOGLE_SHEET);
 
     }
 
@@ -143,19 +145,25 @@ public class DebentureProcessor {
     private void addQuotes(List<Debenture> debentures) {
 
         for (Debenture debenture : debentures) {
+            
             String symbol = debenture.getSymbol();
+            
             try {
-                AlphaVantageQuoteDao quote = quoteService.getQuote(symbol);
-                if (isGoodQuote(quote, symbol)) {
-                    debenture.setLastPrice(quote.getGlobalQuote().getPrice());
-                    debenture.setLastPriceDate(LocalDate.parse(quote.getGlobalQuote().getLastTradingDay()));
+                
+                Quote quote = quoteService.getQuote(symbol);
+                
+                if (null != quote && quote.isGoodQuote()) {
+                    debenture.setLastPrice(quote.getClosingPrice());
+                    debenture.setLastPriceDate(quote.getLocalDate());
                     System.out.println("Updated quote for: " + symbol);
                 } else {
                     System.out.println("Failed to retrieve good quote for: " + symbol);
                 }
+                
             } catch (IOException ioe) {
                 System.out.println(symbol + ": " + ioe.getMessage());
             }
+            
             throttle();
         }
 
@@ -164,7 +172,7 @@ public class DebentureProcessor {
 
     private void addBaseQuotes(List<Debenture> debentures) throws IOException {
 
-        Map<String, AlphaVantageQuoteDao> quoteCache = new HashMap<>();
+        Map<String, Quote> quoteCache = new HashMap<>();
 
         for (Debenture debenture : debentures) {
 
@@ -174,7 +182,8 @@ public class DebentureProcessor {
 
             String symbol = debenture.getUnderlyingSymbol();
 
-            AlphaVantageQuoteDao quote = quoteCache.get(symbol);
+            Quote quote = quoteCache.get(symbol);
+            
             if (null == quote) {
                 quote = quoteService.getQuote(debenture.getUnderlyingSymbol());
                 quoteCache.put(symbol, quote);
@@ -182,22 +191,13 @@ public class DebentureProcessor {
                 throttle();
             }
 
-            if (isGoodQuote(quote, debenture.getSymbol())) {
-                debenture.setUnderlyingLastPrice(quote.getGlobalQuote().getPrice());
-                debenture.setUnderlyingLastPriceDate(LocalDate.parse(quote.getGlobalQuote().getLastTradingDay()));
+            if (quote.isGoodQuote()) {
+                debenture.setUnderlyingLastPrice(quote.getClosingPrice());
+                debenture.setUnderlyingLastPriceDate(quote.getLocalDate());
             }
 
         }
 
-    }
-
-
-    private boolean isGoodQuote(AlphaVantageQuoteDao quote, String symbol) {
-        if (null == quote || null == quote.getGlobalQuote() || null == quote.getGlobalQuote().getPrice() || null == quote.getGlobalQuote().getLastTradingDay()) {
-            System.out.println("Skipping quote for: " + symbol);
-            return false;
-        }
-        return true;
     }
 
 
