@@ -45,7 +45,7 @@ public class DebentureProcessor {
     private static final String ACTION_UPDATE_LIST = "updateList";
     private static final String ACTION_UPDATE_QUOTES = "updateQuotes";
 
-    private static final long QUOTE_SERVICE_THROTTLE_TIME_IN_MS = 20000l;
+    private static final long QUOTE_SERVICE_THROTTLE_TIME_IN_MS = 16000l;
 
 
     private final PersistenceService<Debenture> persistence = new FilePersistenceService<>(Debenture.class);
