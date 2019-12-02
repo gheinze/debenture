@@ -184,16 +184,21 @@ public class DebentureProcessor {
 
             Quote quote = quoteCache.get(symbol);
             
-            if (null == quote) {
-                quote = quoteService.getQuote(debenture.getUnderlyingSymbol());
-                quoteCache.put(symbol, quote);
-                System.out.println("Updated quote for: " + debenture.getUnderlyingSymbol());
-                throttle();
-            }
+            try {
 
-            if (quote.isGoodQuote()) {
-                debenture.setUnderlyingLastPrice(quote.getClosingPrice());
-                debenture.setUnderlyingLastPriceDate(quote.getLocalDate());
+                if (null == quote) {
+                    quote = quoteService.getQuote(debenture.getUnderlyingSymbol());
+                    quoteCache.put(symbol, quote);
+                    System.out.println("Updated quote for: " + debenture.getUnderlyingSymbol());
+                    throttle();
+                }
+
+                if (quote.isGoodQuote()) {
+                    debenture.setUnderlyingLastPrice(quote.getClosingPrice());
+                    debenture.setUnderlyingLastPriceDate(quote.getLocalDate());
+                }
+            } catch (IOException ioe) {
+                System.out.println(symbol + ": " + ioe.getMessage());
             }
 
         }
